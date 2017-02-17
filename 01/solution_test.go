@@ -27,7 +27,7 @@ func (t tt) Start() <-chan string {
 }
 
 func TestWithNoTasks(t *testing.T) {
-	t.Skip()
+	t.Parallel()
 
 	tasks := make(chan []Task)
 	fp := NewFilterPipeline(tasks, 1, regexp.MustCompile("^fizz.*"))
@@ -40,7 +40,7 @@ func TestWithNoTasks(t *testing.T) {
 }
 
 func TestWithOneTasks(t *testing.T) {
-	t.Skip()
+	t.Parallel()
 
 	tasks := make(chan []Task)
 	fp := NewFilterPipeline(tasks, 3, regexp.MustCompile("^fizz.*"))
@@ -63,6 +63,8 @@ func TestWithOneTasks(t *testing.T) {
 }
 
 func TestWithMoreTasks(t *testing.T) {
+	t.Parallel()
+
 	tasks := make(chan []Task)
 	fp := NewFilterPipeline(tasks, 3, regexp.MustCompile(".*buzz$"))
 	fp.SetConcurrency(1)
@@ -99,7 +101,7 @@ func TestWithMoreTasks(t *testing.T) {
 
 	for i, expResult := range expResults {
 		if res, ok := <-results; !ok {
-			t.Errorf("The result channel was closed prematurely when expecting valid result #%d", i)
+			t.Errorf("The result channel was closed prematurely when expecting valid result #%d: %s", i, expResult)
 		} else if res != expResult {
 			t.Errorf("Received a result '%s' (#%d) when expecting '%s'!", res, i, expResult)
 		}
