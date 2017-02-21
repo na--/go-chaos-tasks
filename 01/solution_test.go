@@ -27,8 +27,6 @@ func (t tt) Start() <-chan string {
 }
 
 func TestWithNoTasks(t *testing.T) {
-	t.Parallel()
-
 	tasks := make(chan []Task)
 	fp := NewFilterPipeline(tasks, 1, regexp.MustCompile("^fizz.*"))
 	results := fp.Start()
@@ -40,8 +38,6 @@ func TestWithNoTasks(t *testing.T) {
 }
 
 func TestWithOneTasks(t *testing.T) {
-	t.Parallel()
-
 	tasks := make(chan []Task)
 	fp := NewFilterPipeline(tasks, 3, regexp.MustCompile("^fizz.*"))
 	fp.SetConcurrency(1)
@@ -63,8 +59,6 @@ func TestWithOneTasks(t *testing.T) {
 }
 
 func TestWithMoreTasks(t *testing.T) {
-	t.Parallel()
-
 	tasks := make(chan []Task)
 	fp := NewFilterPipeline(tasks, 3, regexp.MustCompile(".*buzz$"))
 	fp.SetConcurrency(1)
@@ -98,6 +92,39 @@ func TestWithMoreTasks(t *testing.T) {
 		"fizzybuzz", "fizzbuzz", "brumbuzz", "buzz", "a buzz",
 		"an aldrin buzz", "another buzz", "the final buzz",
 	}
+
+	for i, expResult := range expResults {
+		if res, ok := <-results; !ok {
+			t.Errorf("The result channel was closed prematurely when expecting valid result #%d: %s", i, expResult)
+		} else if res != expResult {
+			t.Errorf("Received a result '%s' (#%d) when expecting '%s'!", res, i, expResult)
+		}
+	}
+
+	if res, ok := <-results; ok {
+		t.Errorf("Received a result '%s' when not expecting anything!", res)
+	}
+}
+
+func TestForCorrectSetConcurrency(t *testing.T) {
+	tasks := make(chan []Task)
+	fp := NewFilterPipeline(tasks, 5, regexp.MustCompile("first|second|third"))
+	fp.SetConcurrency(2)
+	results := fp.Start()
+	fp.SetConcurrency(1)
+
+	go func() {
+		tasks <- []Task{
+			tt{{5, "aaa"}, {50, "bbb"}, {500, "third"}, {100, "ccc"}},
+			tt{{5, "ddd"}, {10, "eee"}, {15, "first"}},
+			tt{{150, "second"}, {15, "fff"}},
+		}
+		time.Sleep(5 * time.Millisecond)
+		fp.SetConcurrency(3)
+		close(tasks)
+	}()
+
+	expResults := []string{"first", "second", "third"}
 
 	for i, expResult := range expResults {
 		if res, ok := <-results; !ok {
