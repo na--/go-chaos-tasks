@@ -138,3 +138,24 @@ func TestForCorrectSetConcurrency(t *testing.T) {
 		t.Errorf("Received a result '%s' when not expecting anything!", res)
 	}
 }
+
+func TestSingleThreaded(t *testing.T) {
+	tasks := make(chan []Task)
+	fp := NewFilterPipeline(tasks, 1, regexp.MustCompile("noone"))
+	results := fp.Start()
+
+	go func() {
+		tasks <- []Task{
+			tt{{200, "Stay a while and listen."}},
+			tt{{200, "Yes?"}},
+			tt{{200, "Long ago, Diablo and his brothers were cast out of Hell by the Lesser Evils..."}},
+		}
+		close(tasks)
+	}()
+
+	select {
+	case <-time.After(400 * time.Millisecond):
+	case res, ok := <-results:
+		t.Errorf("Returned too soon with %s, %v", res, ok)
+	}
+}
